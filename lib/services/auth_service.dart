@@ -15,7 +15,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // ------------------------------------------------------------
 // ADRESSE DE TON SERVEUR LARAVEL
 // ------------------------------------------------------------
-const String _urlBase = "http://192.168.12.56:8000/api";
+const String _urlBase = "http://192.168.98.56:8000/api";
 
 
 // ------------------------------------------------------------
@@ -259,5 +259,111 @@ class AuthService {
   static Future<bool> estConnecte() async {
     final token = await _storage.read(key: _cleToken);
     return token != null;
+  }
+    // ----------------------------------------------------------
+  // MOT DE PASSE OUBLIÉ — ÉTAPE 1 : demander l'envoi du code
+  // appelle POST /api/forgot-password
+  // ----------------------------------------------------------
+  static Future<ResultatAuth> demanderCodeReinitialisation({
+    required String email,
+  }) async {
+    try {
+      final reponse = await http.post(
+        Uri.parse("$_urlBase/forgot-password"),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: jsonEncode({"email": email}),
+      );
+
+      final donnees = jsonDecode(reponse.body);
+
+      return ResultatAuth(
+        succes: reponse.statusCode == 200,
+        message: donnees["message"] ?? "Une erreur est survenue.",
+      );
+    } catch (e) {
+      return ResultatAuth(
+        succes: false,
+        message: "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      );
+    }
+  }
+
+  // ----------------------------------------------------------
+  // MOT DE PASSE OUBLIÉ — ÉTAPE 2 : vérifier le code à 6 chiffres
+  // appelle POST /api/verify-reset-code
+  // ----------------------------------------------------------
+  static Future<ResultatAuth> verifierCodeReinitialisation({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final reponse = await http.post(
+        Uri.parse("$_urlBase/verify-reset-code"),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: jsonEncode({"email": email, "code": code}),
+      );
+
+      final donnees = jsonDecode(reponse.body);
+
+      return ResultatAuth(
+        succes: reponse.statusCode == 200,
+        message: donnees["message"] ?? "Code invalide.",
+      );
+    } catch (e) {
+      return ResultatAuth(
+        succes: false,
+        message: "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      );
+    }
+  }
+
+  // ----------------------------------------------------------
+  // MOT DE PASSE OUBLIÉ — ÉTAPE 3 : définir le nouveau mot de passe
+  // appelle POST /api/reset-password
+  // ----------------------------------------------------------
+  static Future<ResultatAuth> reinitialiserMotDePasse({
+    required String email,
+    required String code,
+    required String nouveauMotDePasse,
+    required String confirmationMotDePasse,
+  }) async {
+    try {
+      final reponse = await http.post(
+        Uri.parse("$_urlBase/reset-password"),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: jsonEncode({
+          "email": email,
+          "code": code,
+          "password": nouveauMotDePasse,
+          "password_confirmation": confirmationMotDePasse,
+        }),
+      );
+
+      final donnees = jsonDecode(reponse.body);
+
+      if (reponse.statusCode == 422 && donnees["errors"] != null) {
+        final premiereErreur = (donnees["errors"] as Map).values.first[0];
+        return ResultatAuth(succes: false, message: premiereErreur);
+      }
+
+      return ResultatAuth(
+        succes: reponse.statusCode == 200,
+        message: donnees["message"] ?? "Une erreur est survenue.",
+      );
+    } catch (e) {
+      return ResultatAuth(
+        succes: false,
+        message: "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      );
+    }
   }
 }

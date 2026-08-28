@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/auth_service.dart';
+import 'package:certifio_mobile/Mot_de_passe_oublie.dart';
 import 'package:certifio_mobile/services/Accueil.dart' as accueil;
 import 'package:certifio_mobile/Inscription.dart' as ins;
 
@@ -152,7 +153,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const MotDePasseOublieScreen()));
+                    },
                     child: const Text(
                       "Mot de passe oublié ?",
                       style: TextStyle(color: CertifioColors.orClair, fontSize: 13),

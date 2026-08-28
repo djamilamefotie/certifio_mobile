@@ -1,6 +1,7 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
@@ -17,6 +18,35 @@ G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
+}
+
+static void set_application_icon(GtkWindow* window) {
+  const gchar* possible_paths[] = {
+      "data/flutter_assets/asserts/images/certifio_icon_1024.png",
+      "flutter_assets/asserts/images/certifio_icon_1024.png",
+      "asserts/images/certifio_icon_1024.png",
+      "../asserts/images/certifio_icon_1024.png",
+      nullptr,
+  };
+
+  for (int i = 0; possible_paths[i] != nullptr; ++i) {
+    if (!g_file_test(possible_paths[i], G_FILE_TEST_EXISTS)) {
+      continue;
+    }
+
+    GError* error = nullptr;
+    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(possible_paths[i], &error);
+    if (pixbuf == nullptr) {
+      g_warning("Failed to load application icon '%s': %s",
+                possible_paths[i], error != nullptr ? error->message : "unknown error");
+      g_clear_error(&error);
+      continue;
+    }
+
+    gtk_window_set_icon(window, pixbuf);
+    g_object_unref(pixbuf);
+    return;
+  }
 }
 
 // Implements GApplication::activate.
@@ -53,6 +83,7 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+  set_application_icon(window);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
