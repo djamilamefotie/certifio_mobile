@@ -11,11 +11,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // stockage sécurisé du token entre les écrans.
 // ============================================================
 
-
 // ------------------------------------------------------------
 // ADRESSE DE TON SERVEUR LARAVEL
 // ------------------------------------------------------------
-const String _urlBase = "http://192.168.98.56:8000/api";
+const String _urlBase = "http://192.168.85.56:8000/api";
 
 
 // ------------------------------------------------------------
@@ -75,8 +74,6 @@ class AuthService {
       if (reponse.statusCode == 201) {
         final token = donnees["token"];
 
-        // Si Laravel connecte déjà l'utilisateur à l'inscription
-        // (token renvoyé), on le stocke tout de suite.
         if (token != null) {
           await _storage.write(key: _cleToken, value: token);
         }
@@ -131,9 +128,6 @@ class AuthService {
       if (reponse.statusCode == 200) {
         final token = donnees["token"];
 
-        // On stocke le token de façon chiffrée pour pouvoir
-        // l'utiliser plus tard dans les requêtes protégées
-        // (ex: recupererUtilisateur, déconnexion...).
         if (token != null) {
           await _storage.write(key: _cleToken, value: token);
         }
@@ -161,15 +155,10 @@ class AuthService {
   // ----------------------------------------------------------
   // RÉCUPÉRER L'UTILISATEUR CONNECTÉ — appelle GET /api/user
   // ----------------------------------------------------------
-  // Utilisée au chargement de l'écran d'accueil pour afficher
-  // les vraies infos (nom, email, catégorie...) au lieu de
-  // données statiques. Nécessite un token déjà stocké.
-  // ----------------------------------------------------------
   static Future<ResultatAuth> recupererUtilisateur() async {
     try {
       final token = await _storage.read(key: _cleToken);
 
-      // Pas de token stocké -> l'utilisateur n'est pas connecté.
       if (token == null) {
         return ResultatAuth(
           succes: false,
@@ -185,7 +174,6 @@ class AuthService {
         },
       );
 
-      // Code 200 = token valide, données utilisateur renvoyées.
       if (reponse.statusCode == 200) {
         final donnees = jsonDecode(reponse.body);
         return ResultatAuth(
@@ -196,9 +184,6 @@ class AuthService {
         );
       }
 
-      // Code 401 = token invalide ou expiré.
-      // On supprime le token local devenu inutile pour forcer
-      // une reconnexion propre plutôt que de le garder en cache.
       if (reponse.statusCode == 401) {
         await _storage.delete(key: _cleToken);
         return ResultatAuth(
@@ -220,15 +205,79 @@ class AuthService {
   }
 
   // ----------------------------------------------------------
+  // MODIFIER SES INFORMATIONS — appelle PUT /api/user
+  // ----------------------------------------------------------
+  // Utilisée depuis l'écran Profil pour modifier le nom et/ou
+  // l'email de l'utilisateur connecté. Les deux paramètres sont
+  // optionnels : on n'envoie que ce qui a changé (le backend
+  // accepte "sometimes" sur chaque champ).
+  // ----------------------------------------------------------
+  static Future<ResultatAuth> modifierProfil({
+    String? nom,
+    String? email,
+  }) async {
+    try {
+      final token = await _storage.read(key: _cleToken);
+
+      if (token == null) {
+        return ResultatAuth(
+          succes: false,
+          message: "Session expirée. Veuillez vous reconnecter.",
+        );
+      }
+
+      final Map<String, dynamic> corps = {};
+      if (nom != null) corps["name"] = nom;
+      if (email != null) corps["email"] = email;
+
+      final reponse = await http.put(
+        Uri.parse("$_urlBase/user"),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(corps),
+      );
+
+      final donnees = jsonDecode(reponse.body);
+
+      if (reponse.statusCode == 200) {
+        return ResultatAuth(
+          succes: true,
+          message: donnees["message"] ?? "Profil mis à jour avec succès",
+          utilisateur: donnees["user"],
+        );
+      }
+
+      if (reponse.statusCode == 401) {
+        await _storage.delete(key: _cleToken);
+        return ResultatAuth(
+          succes: false,
+          message: "Session expirée. Veuillez vous reconnecter.",
+        );
+      }
+
+      if (reponse.statusCode == 422 && donnees["errors"] != null) {
+        final premiereErreur = (donnees["errors"] as Map).values.first[0];
+        return ResultatAuth(succes: false, message: premiereErreur);
+      }
+
+      return ResultatAuth(
+        succes: false,
+        message: donnees["message"] ?? "Une erreur est survenue.",
+      );
+    } catch (e) {
+      return ResultatAuth(
+        succes: false,
+        message: "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      );
+    }
+  }
+
+  // ----------------------------------------------------------
   // DÉCONNEXION — appelle POST /api/logout puis supprime le
   // token stocké localement.
-  // ----------------------------------------------------------
-  // On invalide d'abord le token côté Laravel (il supprime
-  // uniquement le token de CET appareil, voir AuthController::logout),
-  // puis on le supprime du stockage local dans tous les cas —
-  // même si l'appel réseau échoue (token déjà expiré, pas de
-  // connexion...), l'utilisateur doit pouvoir se déconnecter
-  // localement sans rester bloqué.
   // ----------------------------------------------------------
   static Future<void> deconnecter() async {
     try {
@@ -245,7 +294,7 @@ class AuthService {
       }
     } catch (e) {
       // On ignore l'erreur réseau ici : la déconnexion locale
-      // doit se faire quoi qu'il arrive (voir commentaire ci-dessus).
+      // doit se faire quoi qu'il arrive.
     } finally {
       await _storage.delete(key: _cleToken);
     }
@@ -253,14 +302,13 @@ class AuthService {
 
   // ----------------------------------------------------------
   // Utilitaire : savoir si un token existe déjà en local
-  // (utile au démarrage de l'app pour sauter directement
-  // à l'écran d'accueil si l'utilisateur est déjà connecté).
   // ----------------------------------------------------------
   static Future<bool> estConnecte() async {
     final token = await _storage.read(key: _cleToken);
     return token != null;
   }
-    // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
   // MOT DE PASSE OUBLIÉ — ÉTAPE 1 : demander l'envoi du code
   // appelle POST /api/forgot-password
   // ----------------------------------------------------------

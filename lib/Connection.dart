@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 import 'package:certifio_mobile/Mot_de_passe_oublie.dart';
 import 'package:certifio_mobile/services/Accueil.dart' as accueil;
 import 'package:certifio_mobile/Inscription.dart' as ins;
@@ -48,8 +49,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (resultat.succes) {
+      // Renvoyer le token FCM maintenant que l'authToken est disponible en stockage
+      await NotificationService().renvoyerToken();
+
+      if (!mounted) return;
+
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const accueil.DashboardScreen()));
-      // TODO: sauvegarder token et rediriger vers l'accueil
     } else {
       setState(() {
         _chargementEnCours = false;

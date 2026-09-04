@@ -7,7 +7,7 @@ class CertifioColors {
   static const fondVertMoyen = Color(0xFF0E3B2E);
   static const vertMedaillon = Color(0xFF2F7D4F);
   static const or = Color(0xFFD9A93E);
-  static const orClair = Color(0xFFF0C868);
+  static const orClair = Color(0xFFF0C868); 
   static const rouge = Color(0xFFC1272D);
   static const texteClair = Color(0xFFFFF8E7);
 }

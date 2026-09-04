@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "934030492971",
+    "project_id": "certifio-98752",
+    "storage_bucket": "certifio-98752.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:934030492971:android:af5447a8ea4441e0b7b16e",
+        "android_client_info": {
+          "package_name": "com.example.certifio_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClC9tX21_I_qoPNEVvBsa0U9C1upae3DY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
