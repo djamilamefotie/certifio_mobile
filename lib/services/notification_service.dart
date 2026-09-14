@@ -22,11 +22,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // 1. Demander la permission (obligatoire sur iOS et Android 13+)
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
       badge: true,
@@ -38,8 +36,7 @@ class NotificationService {
       return;
     }
 
-    // 2. Configurer l'affichage local (nécessaire pour le premier plan)
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('notification_icon');
     const iosSettings = DarwinInitializationSettings();
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -47,49 +44,36 @@ class NotificationService {
     );
     await _localNotifications.initialize(initSettings);
 
-    // Créer un channel Android (obligatoire sur Android 8+)
     const channel = AndroidNotificationChannel(
-      'verification_alerts', // id
-      'Résultats de vérification', // nom visible
+      'verification_alerts',
+      'Résultats de vérification',
       description: 'Notifications de résultat de vérification de diplôme',
       importance: Importance.high,
     );
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
 
-    // 3. Récupérer le token FCM et l'envoyer au backend Laravel
-    //    (seulement si l'utilisateur est déjà connecté, sinon inutile)
+    final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(channel);
+
     String? tokenFcm = await _fcm.getToken();
     if (tokenFcm != null) {
       await sendTokenToBackend(tokenFcm);
     }
-    // Le token peut changer (réinstall, changement d'appareil...)
     _fcm.onTokenRefresh.listen(sendTokenToBackend);
 
-    // 4. ÉTAT 1 : app au premier plan (foreground)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     });
 
-    // 5. ÉTAT 2 : app en arrière-plan, l'utilisateur tape sur la notif
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleNotificationTap(message);
     });
 
-    // 6. ÉTAT 3 : app était complètement fermée, ouverte via la notif
     RemoteMessage? initialMessage = await _fcm.getInitialMessage();
     if (initialMessage != null) {
       _handleNotificationTap(initialMessage);
     }
   }
 
-  // À appeler juste après un login réussi.
-  // Contrairement à init(), ne redemande pas la permission et ne
-  // rajoute pas de listeners (evite les notifications dupliquées) :
-  // se contente de récupérer le token FCM actuel et de le renvoyer
-  // au backend, maintenant que l'authToken est disponible.
   Future<void> renvoyerToken() async {
     String? tokenFcm = await _fcm.getToken();
     if (tokenFcm != null) {
@@ -115,22 +99,15 @@ class NotificationService {
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    // Exemple : rediriger vers l'écran de détail de la vérification
     final verificationId = message.data['verification_id'];
     print('Notification tapée, vérification: $verificationId');
-    // Navigator.pushNamed(context, '/historique', arguments: verificationId);
   }
 
   Future<void> sendTokenToBackend(String tokenFcm) async {
     try {
-      // On récupère le token d'authentification stocké au login
-      // (exactement comme dans auth_service.dart)
       final authToken = await _storage.read(key: _cleToken);
 
       if (authToken == null) {
-        // Utilisateur pas encore connecté : on ne peut pas encore
-        // associer ce token FCM à un compte. Ce n'est pas grave,
-        // on réessaiera après le login (voir note plus bas).
         print('Pas de session active, token FCM non envoyé pour le moment.');
         return;
       }
