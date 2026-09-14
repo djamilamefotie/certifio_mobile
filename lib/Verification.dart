@@ -33,6 +33,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
   bool _verificationEnCours = false;
   ResultatVerification? _resultatVerification;
 
+  // Fonction complexe : gestion asynchrone des permissions et
+  // lancement de l'UI native de capture. Important de gérer
+  // le refus de permission proprement pour éviter un état
+  // incohérent dans l'interface.
   Future<void> _scannerAvecCamera() async {
     final statutCamera = await Permission.camera.request();
     if (!statutCamera.isGranted) {
@@ -58,6 +62,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _importerImage() async {
+    // Ouvre la galerie pour sélectionner une image. La qualité
+    // est limitée avec `imageQuality` pour réduire la taille
+    // des fichiers envoyés au serveur et générés dans les exports.
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -76,6 +83,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _lancerVerification() async {
+    // Lance l'appel au service de vérification en fournissant
+    // le chemin du fichier image. L'opération est asynchrone
+    // et peut durer plusieurs secondes — on verrouille l'UI
+    // via `_verificationEnCours` pour informer l'utilisateur.
     if (_imageSelectionnee == null) return;
 
     setState(() {
@@ -117,6 +128,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<Uint8List> _capturerContenuExport() async {
     // Force un nouveau frame si besoin, puis attend qu'il soit
     // effectivement peint avant de tenter la capture.
+    // Détail : `WidgetsBinding.instance.endOfFrame` attend la fin
+    // de la passe de rendu en cours — sans cela `toImage()` peut
+    // échouer car le RepaintBoundary n'a pas encore été peint.
     if (mounted) {
       setState(() {});
     }
@@ -128,15 +142,24 @@ class _VerificationScreenState extends State<VerificationScreen> {
     }
 
     if (renderObject.debugNeedsPaint) {
+      // Si l'objet a encore besoin d'être peint, attend encore
+      // une frame pour éviter l'exception liée au paint manquant.
       await WidgetsBinding.instance.endOfFrame;
     }
 
+    // `pixelRatio` élève la résolution de l'image capturée.
+    // Valeurs élevées améliorent la netteté mais consomment
+    // plus de mémoire : 3.0 est un compromis courant.
     final image = await renderObject.toImage(pixelRatio: 3.0);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData!.buffer.asUint8List();
   }
 
   Future<void> _exporterEnImage() async {
+    // Prépare et partage une image PNG représentant le widget
+    // d'export (photo + bandeau résultat). On écrit d'abord le
+    // fichier dans le répertoire temporaire puis on utilise
+    // `share_plus` pour afficher le dialogue natif de partage.
     if (_imageSelectionnee == null) return;
 
     setState(() => _isExporting = true);
@@ -163,6 +186,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _exporterEnPdf() async {
+    // Génère un PDF contenant l'image composite capturée.
+    // On convertit le `Uint8List` en `pw.MemoryImage` puis on
+    // insère l'image sur une page A4 en la centrant et en
+    // la redimensionnant pour conserver la mise en page.
     if (_imageSelectionnee == null) return;
 
     setState(() => _isExporting = true);
@@ -290,6 +317,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
         texteStatut = (resultat.statut ?? "AMBIGU").toUpperCase();
     }
 
+    // Widget destiné à l'export : largeur fixée pour garantir
+    // un rendu cohérent en image et PDF (facilite l'alignement
+    // et la lisibilité sur différents appareils).
     return Material(
       color: CertifioColors.fondVertFonce,
       child: Container(
@@ -357,6 +387,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         ),
                     ],
                   ),
+                  // Le bandeau ci-dessous contient le texte détaillé
+                  // du résultat. C'est la partie la plus importante
+                  // pour l'interprétation du verdict par un humain
+                  // (ou pour une preuve jointe au PDF/Image).
                   if (resultat.resultatTexte != null) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -398,6 +432,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
             size: 72,
           ),
           const SizedBox(height: 32),
+          // Ecran d'accueil minimal : invite l'utilisateur à
+          // scanner ou importer un diplôme avant toute action.
 
           if (_messageStatut != null)
             Padding(
@@ -467,6 +503,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
         const SizedBox(height: 12),
 
+        // Flux utilisateur en deux étapes : aperçu puis vérification.
+        // Ceci évite les envois accidentels et permet d'afficher
+        // un écran de confirmation avant l'analyse.
         // Étape 1 : aperçu de l'image → l'utilisateur doit valider avant l'envoi
         if (!_verificationEnCours && _resultatVerification == null) ...[
           Row(

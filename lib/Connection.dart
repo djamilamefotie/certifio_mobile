@@ -4,6 +4,7 @@ import 'services/notification_service.dart';
 import 'package:certifio_mobile/Mot_de_passe_oublie.dart';
 import 'package:certifio_mobile/services/Accueil.dart' as accueil;
 import 'package:certifio_mobile/Inscription.dart' as ins;
+import 'package:certifio_mobile/AccueilInstitution.dart';
 
 // Définitions locales renommées pour préserver les couleurs
 class CertifioColors {
@@ -32,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _motDePasseVisible = false;
   bool _chargementEnCours = false;
   String? _messageErreur;
+
   Future<void> _seConnecter() async {
     final formulaireValide = _formKey.currentState?.validate() ?? false;
     if (!formulaireValide) return;
@@ -54,7 +56,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const accueil.DashboardScreen()));
+      final categorie = resultat.utilisateur?['categorie'];
+      final nomUtilisateur = resultat.utilisateur?['name'] ?? '';
+
+      print('=== CATEGORIE REÇUE: $categorie ===');
+      print('=== UTILISATEUR COMPLET: ${resultat.utilisateur} ===');
+
+      Widget ecranAccueil;
+      switch (categorie) {
+        case 'institut':
+          ecranAccueil = AccueilInstitutionScreen(nomInstitution: nomUtilisateur);
+          break;
+        case 'administrateur':
+          ecranAccueil = const accueil.DashboardScreen();
+          break;
+        default: // 'client'
+          ecranAccueil = const accueil.DashboardScreen();
+      }
+
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ecranAccueil));
     } else {
       setState(() {
         _chargementEnCours = false;
@@ -108,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const Text(
                   "Content de vous revoir",
-                    style: TextStyle(
+                  style: TextStyle(
                     color: CertifioColors.texteClair,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -224,9 +244,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 Center(
                   child: TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ins.RegisterScreen()));
-                      },
+                    onPressed: () {
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ins.RegisterScreen()));
+                    },
                     child: RichText(
                       text: TextSpan(
                         text: "Pas encore de compte ? ",

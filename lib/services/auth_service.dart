@@ -14,7 +14,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // ------------------------------------------------------------
 // ADRESSE DE TON SERVEUR LARAVEL
 // ------------------------------------------------------------
-const String _urlBase = "http://192.168.85.56:8000/api";
+const String _urlBase = "http://192.168.212.56:8000/api";
 
 
 // ------------------------------------------------------------

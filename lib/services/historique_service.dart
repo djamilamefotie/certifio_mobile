@@ -31,7 +31,7 @@ class ResultatHistorique {
 
 class HistoriqueService {
   // Même base URL que VerificationScreen / VerificationService.
-  static const String _baseUrl = 'http://192.168.85.56:8000/api';
+  static const String _baseUrl = 'http://192.168.212.56:8000/api';
 
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 

@@ -7,7 +7,7 @@ import 'dart:convert';
 // ------------------------------------------------------------
 // Doit correspondre exactement à _urlBase dans auth_service.dart
 // ------------------------------------------------------------
-const String _urlBase = "http://192.168.85.56:8000/api";
+const String _urlBase = "http://192.168.212.56:8000/api";
 
 // Doit correspondre exactement à _storage / _cleToken dans auth_service.dart
 final _storage = FlutterSecureStorage();
