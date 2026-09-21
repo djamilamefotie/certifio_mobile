@@ -10,7 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // de la vérification (authentique / suspect / ambigu).
 // ============================================================
 
-const String _urlBase = "http://192.168.212.56:8000/api"; // TODO: garder identique à auth_service.dart
+const String _urlBase = "http://192.168.11.56:8000/api"; // TODO: garder identique à auth_service.dart
 final _storage = FlutterSecureStorage();
 const String _cleToken = "auth_token";
 

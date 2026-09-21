@@ -5,6 +5,7 @@ import 'package:certifio_mobile/Mot_de_passe_oublie.dart';
 import 'package:certifio_mobile/services/Accueil.dart' as accueil;
 import 'package:certifio_mobile/Inscription.dart' as ins;
 import 'package:certifio_mobile/AccueilInstitution.dart';
+import 'package:certifio_mobile/admin_shell.dart'; // ← remplace admin_home.dart
 
 // Définitions locales renommées pour préserver les couleurs
 class CertifioColors {
@@ -15,6 +16,18 @@ class CertifioColors {
   static const orClair = Color(0xFFF0C868);
   static const rouge = Color(0xFFC1272D);
   static const texteClair = Color(0xFFFFF8E7);
+}
+
+/// Déconnexion depuis l'espace admin : appelle /api/logout, efface le token
+/// stocké (AuthService.deconnecter), puis retourne au login.
+Future<void> deconnecterAdmin(BuildContext context) async {
+  await AuthService.deconnecter();
+  if (!context.mounted) return;
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => const LoginScreen()),
+    (route) => false,
+  );
 }
 
 // ÉCRAN DE CONNEXION — CERTIFIO
@@ -58,9 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final categorie = resultat.utilisateur?['categorie'];
       final nomUtilisateur = resultat.utilisateur?['name'] ?? '';
-
-      print('=== CATEGORIE REÇUE: $categorie ===');
-      print('=== UTILISATEUR COMPLET: ${resultat.utilisateur} ===');
+      final emailUtilisateur = resultat.utilisateur?['email'] ?? '';
 
       Widget ecranAccueil;
       switch (categorie) {
@@ -68,7 +79,15 @@ class _LoginScreenState extends State<LoginScreen> {
           ecranAccueil = AccueilInstitutionScreen(nomInstitution: nomUtilisateur);
           break;
         case 'administrateur':
-          ecranAccueil = const accueil.DashboardScreen();
+          // Le Builder fournit un context valide même après la fermeture du login
+          ecranAccueil = Builder(
+            builder: (ctx) => AdminShell(
+              adminName: nomUtilisateur,
+              adminEmail: emailUtilisateur,
+              token: resultat.token ?? '',
+              onLogout: () => deconnecterAdmin(ctx),
+            ),
+          );
           break;
         default: // 'client'
           ecranAccueil = const accueil.DashboardScreen();
@@ -137,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 4),
                 Text(
                   "Connectez-vous pour continuer.",
-                  style: TextStyle(color: CertifioColors.texteClair.withOpacity(0.6)),
+                  style: TextStyle(color: CertifioColors.texteClair.withValues(alpha: 0.6)),
                 ),
 
                 const SizedBox(height: 28),
@@ -165,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   iconeSuffixe: IconButton(
                     icon: Icon(
                       _motDePasseVisible ? Icons.visibility_off : Icons.visibility,
-                      color: CertifioColors.texteClair.withOpacity(0.6),
+                      color: CertifioColors.texteClair.withValues(alpha: 0.6),
                     ),
                     onPressed: () => setState(() => _motDePasseVisible = !_motDePasseVisible),
                   ),
@@ -193,9 +212,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: CertifioColors.rouge.withOpacity(0.15),
+                      color: CertifioColors.rouge.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: CertifioColors.rouge.withOpacity(0.4)),
+                      border: Border.all(color: CertifioColors.rouge.withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       children: [
@@ -250,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: RichText(
                       text: TextSpan(
                         text: "Pas encore de compte ? ",
-                        style: TextStyle(color: CertifioColors.texteClair.withOpacity(0.6)),
+                        style: TextStyle(color: CertifioColors.texteClair.withValues(alpha: 0.6)),
                         children: const [
                           TextSpan(
                             text: "S'inscrire",
@@ -289,8 +308,8 @@ class _LoginScreenState extends State<LoginScreen> {
       style: const TextStyle(color: CertifioColors.texteClair),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: CertifioColors.texteClair.withOpacity(0.6)),
-        prefixIcon: Icon(icone, color: CertifioColors.texteClair.withOpacity(0.6)),
+        labelStyle: TextStyle(color: CertifioColors.texteClair.withValues(alpha: 0.6)),
+        prefixIcon: Icon(icone, color: CertifioColors.texteClair.withValues(alpha: 0.6)),
         suffixIcon: iconeSuffixe,
         filled: true,
         fillColor: CertifioColors.fondVertMoyen,
@@ -304,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: CertifioColors.rouge.withOpacity(0.6)),
+          borderSide: BorderSide(color: CertifioColors.rouge.withValues(alpha: 0.6)),
         ),
       ),
     );
