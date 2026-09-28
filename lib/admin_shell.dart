@@ -6,7 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 // C'est la même que dans auth_service.dart, mais sans /api
 // (ex : http://192.168.11.56:8000). Ne pas mettre 127.0.0.1 : sur le téléphone,
 // cette adresse désigne le téléphone lui-même.
-const String kWebBase = 'http://192.168.11.56:8000';
+const String kWebBase = 'http://192.168.166.56:8000';
 
 const _kGreenDark = Color(0xFF0B2D24);
 const _kGreen = Color(0xFF0E9F6E);
